@@ -1,9 +1,12 @@
 package com.juliusbaer.itasia.crm.migration;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.kie.server.api.marshalling.MarshallingFormat;
@@ -12,6 +15,8 @@ import org.kie.server.client.KieServicesConfiguration;
 import org.kie.server.client.KieServicesFactory;
 
 import com.juliusbaer.itasia.crm.reconstruct.BRMSKnowledgeBaseEnum;
+import com.juliusbaer.itasia.crm.reconstruct.CRMException;
+import com.juliusbaer.itasia.crm.reconstruct.MonitoringConstants;
 
 import mortgages.Applicant;
 import mortgages.IncomeSource;
@@ -38,29 +43,12 @@ public class BRMSKieServicesCache implements IBRMSKieServicesCache {
     public void initialize() {
         aLog.info("BRMSKieServiceCache - initialize - Start");
         long currentMilis = System.currentTimeMillis();
-
-        // Temporary implementation: store the connection info in variables
-        String serverUrl = "http://vm1.atiila.id:8181/kie-server/services/rest/server";
-        String username = "pamAdmin";
-        String password = "redhatpam1!";
         
-        // Register used java bean classes
-        Set<Class<?>> extraClassList = new HashSet<Class<?>>();
-        extraClassList.add(LoanApplication.class);
-        extraClassList.add(Applicant.class);
-        extraClassList.add(IncomeSource.class);
-
-        KieServicesConfiguration config = KieServicesFactory.newRestConfiguration(serverUrl, username, password);
-        config.setMarshallingFormat(MarshallingFormat.JAXB);
-        config.addExtraClasses(extraClassList);
-
-        // Create servicesClient
-        KieServicesClient kieServicesClient = KieServicesFactory.newKieServicesClient(config);
-
         Map<String, KieServicesAdapter> tmpCache = new HashMap<String, KieServicesAdapter>();
+        String envInstance = System.getProperty("env-instance") != null ? System.getProperty("env-instance") : System.getenv("ENV_INSTANCE");
         tmpCache.put(
           BRMSKnowledgeBaseEnum.KBASE_ACC_VALIDATION.toString(),
-          readKieServices(kieServicesClient, "mortgages_1.0.0-SNAPSHOT"));
+          readKieServices("mortgages-properties-"+ envInstance +".properties"));
       
         cache.putAll(tmpCache);
           
@@ -73,47 +61,37 @@ public class BRMSKieServicesCache implements IBRMSKieServicesCache {
         return cache.get(brmsKnowBase.toString());
     }
 
-    private KieServicesAdapter readKieServices(KieServicesClient kieServicesClient, String containerId) {
-        KieServicesAdapter kieServicesAdapter = new KieServicesAdapter(kieServicesClient, containerId);
-        return kieServicesAdapter;
+    private KieServicesAdapter readKieServices(String filename) {
+        aLog.info("BRMSKieServicesCache - readKieServices - Start");
+        KieServicesAdapter kieServicesAdapter = null;
         
-        /*aLog.info("BRMSKnowledgeBaseCache - readKnowledgeBase - Start");
-        KnowledgeBase kBase = null;
-
         try {
-            KnowledgeBuilder kBuilder = KnowledgeBuilderFactory.newKnowledgeBuilder();
-            Resource changeset = ResourceFactory.newFileResource(new File(getClass().getClassLoader().getResource(fileName).toURI()));
-            kBuilder.add(changeset, ResourceType.CHANGE_SET);
-            KnowledgeBuilderErrors errors = kBuilder.getErrors();
-            if (CollectionsUtil.isNotBlank(errors)) {
-                for (KnowledgeBuilderError error : errors) {
-                    eLog.severe(MonitoringConstants.ERR_CRM_000009
-                            + " BRMSKnowledgeBaseCache - readKnowledgeBase - Error occurred in reading resource: "
-                            + error + "with error message as: " + error.getMessage());
-                }
-                throw new CRMException("Unable to read from Rule resources");
-            }
-            kBase = KnowledgeBaseFactory.newKnowledgeBase();
-            kBase.addKnowledgePackages(kBuilder.getKnowledgePackages());
-            Collection<KnowledgePackage> kPackageList = kBase.getKnowledgePackages();
-            if (CollectionsUtil.isNotBlank(kPackageList)) {
-                for (KnowledgePackage kPack : kPackageList) {
-                    aLog.info("BRMSKnowledgeBaseCache - readKnowledgeBase - Knowledge packages: " + kPack.getName());
-                    Collection<Rule> ruleList = kPack.getRules();
-                    for (Rule rule : ruleList) {
-                        aLog.info("BRMSKnowledgeBaseCache - readKnowledgeBase - Rules: " + rule.getName());
-                    }
-                }
-            } else {
-                aLog.info("BRMSKnowledgeBaseCache - readKnowledgeBase - No Knowledge package read");
-            }
+            String envInstance = System.getProperty("env-instance") != null ? System.getProperty("env-instance") : System.getenv("ENV_INSTANCE");
+            Properties properties = new Properties();
+            properties.load(getClass().getClassLoader().getResourceAsStream(envInstance + File.separatorChar + filename));
+            
+            String serverUrl = properties.getProperty("server");
+            String username = properties.getProperty("username");
+            String password = properties.getProperty("password");
+            
+            // Register used java bean classes
+            Set<Class<?>> extraClassList = new HashSet<Class<?>>();
+            extraClassList.add(LoanApplication.class);
+            extraClassList.add(Applicant.class);
+            extraClassList.add(IncomeSource.class);
+
+            KieServicesConfiguration config = KieServicesFactory.newRestConfiguration(serverUrl, username, password);
+            config.setMarshallingFormat(MarshallingFormat.JAXB);
+            config.addExtraClasses(extraClassList);
+
+            // Create servicesClient
+            KieServicesClient kieServicesClient = KieServicesFactory.newKieServicesClient(config);
+            kieServicesAdapter = new KieServicesAdapter(kieServicesClient, properties.getProperty("container"));
         } catch (Exception e) {
-            e.printStackTrace();
-            eLog.severe(MonitoringConstants.ERR_CRM_000009 + " Exception occurred while creating BRMS knowledge base: "
-                    + e);
-            throw new CRMException("Exception occurred while creating BRMS knowledge base:e ", e);
+            eLog.log(Level.SEVERE, MonitoringConstants.ERR_CRM_000009 + " Exception occurred while creating BRMS Kie Services: " + e);
+            throw new CRMException("Exception occurred while creating BRMS BRMS Kie Services:e ", e);        
         }
-        return kBase;*/
+        return kieServicesAdapter;
     }
 
     public static BRMSKieServicesCache getInstance() {
