@@ -1,6 +1,7 @@
 package com.juliusbaer.itasia.crm.migration;
 
 import java.io.File;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -18,9 +19,9 @@ import com.juliusbaer.itasia.crm.reconstruct.BRMSKnowledgeBaseEnum;
 import com.juliusbaer.itasia.crm.reconstruct.CRMException;
 import com.juliusbaer.itasia.crm.reconstruct.MonitoringConstants;
 
-import mortgages.Applicant;
-import mortgages.IncomeSource;
-import mortgages.LoanApplication;
+import mortgages.mortgages.Applicant;
+import mortgages.mortgages.IncomeSource;
+import mortgages.mortgages.LoanApplication;
 
 public class BRMSKieServicesCache implements IBRMSKieServicesCache {
     private static final Logger aLog = Logger.getLogger("ATL");
@@ -47,8 +48,11 @@ public class BRMSKieServicesCache implements IBRMSKieServicesCache {
         Map<String, KieServicesAdapter> tmpCache = new HashMap<String, KieServicesAdapter>();
         String envInstance = System.getProperty("env-instance") != null ? System.getProperty("env-instance") : System.getenv("ENV_INSTANCE");
         tmpCache.put(
-          BRMSKnowledgeBaseEnum.KBASE_ACC_VALIDATION.toString(),
+          BRMSKnowledgeBaseEnum.MORTGAGES.toString(),
           readKieServices("mortgages-properties-"+ envInstance +".properties"));
+        tmpCache.put(
+                BRMSKnowledgeBaseEnum.MORTGAGE_PROCESS.toString(),
+                readKieServices("mortgage-process-properties-"+ envInstance +".properties"));
       
         cache.putAll(tmpCache);
           
@@ -79,14 +83,27 @@ public class BRMSKieServicesCache implements IBRMSKieServicesCache {
             extraClassList.add(LoanApplication.class);
             extraClassList.add(Applicant.class);
             extraClassList.add(IncomeSource.class);
+            extraClassList.add(com.myspace.mortgage_app.Application.class);
+            extraClassList.add(com.myspace.mortgage_app.Applicant.class);
+            extraClassList.add(com.myspace.mortgage_app.Property.class);
+            extraClassList.add(com.myspace.mortgage_app.ValidationErrorDO.class);
+            
+            KieServicesConfiguration jaxbConfig = KieServicesFactory.newRestConfiguration(serverUrl, username, password);
+            jaxbConfig.setMarshallingFormat(MarshallingFormat.JAXB);
 
-            KieServicesConfiguration config = KieServicesFactory.newRestConfiguration(serverUrl, username, password);
-            config.setMarshallingFormat(MarshallingFormat.JAXB);
-            config.addExtraClasses(extraClassList);
+            KieServicesConfiguration jsonConfig = KieServicesFactory.newRestConfiguration(serverUrl, username, password);
+            jsonConfig.setMarshallingFormat(MarshallingFormat.JSON);
+            jsonConfig.addExtraClasses(extraClassList);
 
+            KieServicesConfiguration xStreamConfig = KieServicesFactory.newRestConfiguration(serverUrl, username, password);
+            xStreamConfig.setMarshallingFormat(MarshallingFormat.XSTREAM);
+            xStreamConfig.addExtraClasses(extraClassList);
             // Create servicesClient
-            KieServicesClient kieServicesClient = KieServicesFactory.newKieServicesClient(config);
-            kieServicesAdapter = new KieServicesAdapter(kieServicesClient, properties.getProperty("container"));
+            KieServicesClient jaxbKieServicesClient = KieServicesFactory.newKieServicesClient(jaxbConfig);
+            KieServicesClient jsonKieServicesClient = KieServicesFactory.newKieServicesClient(jsonConfig);
+            KieServicesClient xStreamKieServicesClient = KieServicesFactory.newKieServicesClient(xStreamConfig);
+
+            kieServicesAdapter = new KieServicesAdapter(jaxbKieServicesClient, jsonKieServicesClient, xStreamKieServicesClient, properties.getProperty("container"));
         } catch (Exception e) {
             eLog.log(Level.SEVERE, MonitoringConstants.ERR_CRM_000009 + " Exception occurred while creating BRMS Kie Services: " + e);
             throw new CRMException("Exception occurred while creating BRMS BRMS Kie Services:e ", e);        

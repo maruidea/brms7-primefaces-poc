@@ -7,9 +7,9 @@ import javax.faces.bean.SessionScoped;
 import com.juliusbaer.itasia.crm.service.AccountService;
 import com.juliusbaer.itasia.crm.service.AccountServiceImpl;
 
-import mortgages.Applicant;
-import mortgages.IncomeSource;
-import mortgages.LoanApplication;
+import mortgages.mortgages.Applicant;
+import mortgages.mortgages.IncomeSource;
+import mortgages.mortgages.LoanApplication;
 
 @ManagedBean
 @SessionScoped
@@ -60,9 +60,9 @@ public class Form {
         Object explanation = null;
         
         if(hasIncome) {
-            explanation = accountService.validate(loanApplication, applicant, incomeSource);
+            //explanation = accountService.validate(loanApplication, applicant, incomeSource);
         } else {
-            explanation = accountService.validate(loanApplication, applicant, null);
+            //explanation = accountService.validate(loanApplication, applicant, null);
         }
         
         this.status = explanation != null ? String.valueOf(explanation) : "APPROVED";

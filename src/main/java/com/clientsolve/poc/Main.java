@@ -1,10 +1,12 @@
 package com.clientsolve.poc;
+import java.util.ArrayList;
+
 import com.juliusbaer.itasia.crm.service.AccountService;
 import com.juliusbaer.itasia.crm.service.AccountServiceImpl;
 
-import mortgages.Applicant;
-import mortgages.IncomeSource;
-import mortgages.LoanApplication;
+import mortgages.mortgages.CustomApplicant;
+import mortgages.mortgages.IncomeSource;
+import mortgages.mortgages.LoanApplication;
 
 public class Main {
 
@@ -14,8 +16,9 @@ public class Main {
         LoanApplication loanApplication = new LoanApplication();
         loanApplication.setApproved(null);
 
-        Applicant applicant = new Applicant();
+        CustomApplicant applicant = new CustomApplicant();
         applicant.setAge(18);
+        //applicant.setLoans(new ArrayList<LoanApplication>());
         
         IncomeSource incomeSource = new IncomeSource();
         
